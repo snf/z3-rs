@@ -61,7 +61,7 @@ impl Z3 {
         }
     }
     #[inline]
-    pub fn ctx(&self) -> z3_sys::Z3_context {
+    pub unsafe fn ctx(&self) -> z3_sys::Z3_context {
         self.ctx
     }
     pub unsafe fn get_model_str(&self, m: z3_sys::Z3_model) -> &str {
@@ -257,13 +257,16 @@ impl <'a> Z3Model<'a> {
         if self.is_model() {
             unsafe {
                 let mut res_ast: z3_sys::Z3_ast = ptr::null_mut();
-                let res = z3_sys::Z3_model_eval(self.z3.ctx(), *self.model,
-                                            ast.ast, z3_sys::Z3_L_TRUE,
-                                            &mut res_ast);
-                Some(Z3Ast {
-                    ast: res_ast,
-                    z3: self.z3
-                })
+                if z3_sys::Z3_model_eval(self.z3.ctx(), *self.model,
+                                         ast.ast, z3_sys::Z3_L_TRUE,
+                                         &mut res_ast) == z3_sys::Z3_L_TRUE {
+                    Some(Z3Ast {
+                        ast: res_ast,
+                        z3: self.z3
+                    })
+                } else {
+                    None
+                }
             }
         } else {
             None
