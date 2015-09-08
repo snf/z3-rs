@@ -104,6 +104,7 @@ impl Z3 {
         }
     }
 
+    //#[deprecated]
     pub fn prove(&self, f: &Z3Ast, is_valid: bool) {
         unsafe {
             z3_sys::Z3_push(self.ctx);
@@ -175,8 +176,8 @@ impl Z3 {
     impl_mk_2!(bvmul, Z3_mk_bvmul);
     impl_mk_2!(bvudiv, Z3_mk_bvudiv);
     impl_mk_2!(bvsdiv, Z3_mk_bvsdiv);
-    impl_mk_2!(bvure, Z3_mk_bvurem);
-    impl_mk_2!(bvsre, Z3_mk_bvsrem);
+    impl_mk_2!(bvurem, Z3_mk_bvurem);
+    impl_mk_2!(bvsrem, Z3_mk_bvsrem);
     impl_mk_2!(bvsmod, Z3_mk_bvsmod);
     impl_mk_2!(bvult, Z3_mk_bvult);
     impl_mk_2!(bvslt, Z3_mk_bvslt);
@@ -241,17 +242,33 @@ impl Z3 {
 }
 
 impl <'a> Z3Ast<'a> {
+    /// Get u64 representation of this Ast value if possible
     pub fn get_u64(&self) -> Option<u64> {
         unsafe {
             let mut res: u64 = 0;
-            if z3_sys::Z3_get_numeral_uint64(self.z3.ctx(), self.ast, &mut res) 
+            if z3_sys::Z3_get_numeral_uint64(self.z3.ctx(), self.ast, &mut res)
                 == z3_sys::Z3_L_TRUE
             {
                 Some(res)
             } else {
                 None
             }
-        }        
+        }
+    }
+    /// Get BitVector width
+    pub fn get_bv_width(&self) -> u32 {
+        unsafe {
+            let sort = z3_sys::Z3_get_sort(self.z3.ctx(), self.ast);
+            z3_sys::Z3_get_bv_sort_size(self.z3.ctx(), sort)
+        }
+    }
+    /// Zero extend BitVector
+    pub fn zero_ext(&self, i: u32) -> Z3Ast<'a> {
+        self.z3.zero_ext(i, &self)
+    }
+    /// Sign extend BitVector
+    pub fn sign_ext(&self, i: u32) -> Z3Ast<'a> {
+        self.z3.sign_ext(i, &self)
     }
 }
 
@@ -275,6 +292,8 @@ impl <'a> Z3Model<'a> {
             None
         }
     }
+
+    pub fn is_valid(&self) -> bool { self.res == z3_sys::Z3_L_FALSE }
     pub fn is_model(&self) -> bool {
         match self.res {
             z3_sys::Z3_L_UNDEF | z3_sys::Z3_L_TRUE => true,
@@ -285,13 +304,13 @@ impl <'a> Z3Model<'a> {
 
     pub fn get_str(&self) -> &str {
         if self.is_model() {
-                unsafe {
-                    let cstr = z3_sys::Z3_model_to_string(self.z3.ctx(), *self.model);
-                    let slice = CStr::from_ptr(cstr);
-                    let buf: &[u8] = slice.to_bytes();
-                    let str_slice: &str = str::from_utf8(buf).unwrap();
-                    str_slice
-                }
+            unsafe {
+                let cstr = z3_sys::Z3_model_to_string(self.z3.ctx(), *self.model);
+                let slice = CStr::from_ptr(cstr);
+                let buf: &[u8] = slice.to_bytes();
+                let str_slice: &str = str::from_utf8(buf).unwrap();
+                str_slice
+            }
         } else {
             "no model"
         }
@@ -307,24 +326,48 @@ impl Drop for Z3 {
 }
 
 #[test]
+fn test_get_bv_width() {
+    let z3 = Z3::new();
+    let a = z3.mk_bv_i(1, 32);
+    let b = z3.mk_bv_str("b", 64);
+    let c = z3.mk_bv_str("big", 256);
+    let d = z3.mk_bv_i(2, 1);
+
+    assert_eq!(a.get_bv_width(), 32);
+    assert_eq!(b.get_bv_width(), 64);
+    assert_eq!(c.get_bv_width(), 256);
+    assert_eq!(d.get_bv_width(), 1);
+}
+
+#[test]
+fn test_zero_ext() {
+    let z3 = Z3::new();
+    let a = z3.mk_bv_str("a", 32);
+    let b = a.zero_ext(32);
+    assert_eq!(b.get_bv_width(), 64);
+}
+
+#[test]
 fn it_works() {
     let z3 = Z3::new();
     let a = z3.mk_bv_i(1, 32);
     let b = z3.mk_bv_i(2, 32);
     let c = z3.mk_bv_str("c", 32);
-    
+
+    assert_eq!(c.get_bv_width(), 32);
+
     let d = z3.bvand(&a, &b);
     let e = z3.bvor(&a, &b);
-    
+
     let gt = z3.bvugt(&d, &e);
     let eq = z3.eq(&d, &e);
     let neq = z3.not(&gt);
-    
+
     let h = z3.prove(&eq, true);
-    
+
     let model = z3.check_and_get_model(&eq);
     println!("model: {}", model.get_str());
-    
+
     let new_a = model.eval(&a).unwrap();
     let val_a = new_a.get_u64().unwrap();
     println!("val_a: 0x{:x}", val_a);
