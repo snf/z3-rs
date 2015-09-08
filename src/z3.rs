@@ -9,12 +9,9 @@ use z3_sys;
 pub struct Z3 {
     ctx: z3_sys::Z3_context
 }
+#[derive(Clone)]
 pub struct Z3Ast<'a> {
     ast: z3_sys::Z3_ast,
-    z3: &'a Z3
-}
-pub struct Z3Sort<'a> {
-    sort: z3_sys::Z3_sort,
     z3: &'a Z3
 }
 pub struct Z3Model<'a> {
@@ -74,7 +71,7 @@ impl Z3 {
 
     pub fn check_and_get_model<'a>(&'a self, f: &Z3Ast) -> Z3Model<'a> {
         unsafe {
-            let mut m: *mut z3_sys::Z3_model =
+            let m: *mut z3_sys::Z3_model =
                 libc::malloc(mem::size_of::<usize>() as libc::size_t)
                 as *mut z3_sys::Z3_model;
 
@@ -100,7 +97,7 @@ impl Z3 {
             let not_f = z3_sys::Z3_mk_not(self.ctx, f.ast);
             z3_sys::Z3_assert_cnstr(self.ctx, not_f);
 
-            let mut m: *mut z3_sys::Z3_model =
+            let m: *mut z3_sys::Z3_model =
                 libc::malloc(mem::size_of::<usize>() as libc::size_t)
                 as *mut z3_sys::Z3_model;
 
@@ -142,14 +139,6 @@ impl Z3 {
                 z3_sys::Z3_del_model(self.ctx, *m);
             }
             z3_sys::Z3_pop(self.ctx(), 1);
-        }
-    }
-    pub fn bv_sort<'a>(&'a self, width: u32) -> Z3Sort<'a> {
-        unsafe {
-            Z3Sort {
-                sort: z3_sys::Z3_mk_bv_sort(self.ctx, width),
-                z3: &self
-            }
         }
     }
 
@@ -213,28 +202,31 @@ impl Z3 {
             }
         }
     }
-}
 
-impl<'a> Z3Sort<'a> {
-    pub fn mk_const_i(&'a self, i: i32) -> Z3Ast<'a> {
+    /// Create a new BitVector const of name `i` and width `w`
+    pub fn mk_bv_i<'a>(&'a self, i: i32, w: u32) -> Z3Ast<'a> {
         unsafe {
-            let sym = z3_sys::Z3_mk_int_symbol(self.z3.ctx(), i);
+            let sort= z3_sys::Z3_mk_bv_sort(self.ctx, w);
+            let sym = z3_sys::Z3_mk_int_symbol(self.ctx, i);
             Z3Ast {
-                ast: z3_sys::Z3_mk_const(self.z3.ctx(), sym, self.sort),
-                z3: self.z3
+                ast: z3_sys::Z3_mk_const(self.ctx, sym, sort),
+                z3: &self
             }
         }
     }
-    pub fn mk_const_str(&'a self, s: &str) -> Z3Ast<'a> {
+    /// Create a new BitVector const of name `s` and width `w`
+    pub fn mk_bv_str<'a>(&'a self, s: &str, w: u32) -> Z3Ast<'a> {
         unsafe {
+            let sort= z3_sys::Z3_mk_bv_sort(self.ctx, w);
             let cs = CString::new(s).unwrap();
-            let sym = z3_sys::Z3_mk_string_symbol(self.z3.ctx(), cs.as_ptr());
+            let sym = z3_sys::Z3_mk_string_symbol(self.ctx, cs.as_ptr());
             Z3Ast {
-                ast: z3_sys::Z3_mk_const(self.z3.ctx(), sym, self.sort),
-                z3: self.z3
+                ast: z3_sys::Z3_mk_const(self.ctx, sym, sort),
+                z3: &self
             }
         }
     }
+
 }
 
 impl <'a> Z3Ast<'a> {
@@ -306,10 +298,9 @@ impl Drop for Z3 {
 #[test]
 fn it_works() {
     let z3 = Z3::new();
-    let bv_sorts = z3.bv_sort(32);
-    let a = bv_sorts.mk_const_i(1);
-    let b = bv_sorts.mk_const_i(2);
-    let c = bv_sorts.mk_const_str("c");
+    let a = z3.mk_bv_i(1, 32);
+    let b = z3.mk_bv_i(2, 32);
+    let c = z3.mk_bv_str("c", 32);
     
     let d = z3.bvand(&a, &b);
     let e = z3.bvor(&a, &b);
