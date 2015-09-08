@@ -46,6 +46,19 @@ macro_rules! impl_mk_2 {
         }
     )
 }
+macro_rules! impl_mk_i_1 {
+    ($name:ident, $fun:ident) => (
+        pub fn $name<'a>(&'a self, i: u32, t1: &Z3Ast) -> Z3Ast<'a> {
+            unsafe {
+                let ast = z3_sys::$fun(self.ctx, i, t1.ast);
+                Z3Ast {
+                    ast: ast,
+                    z3: &self
+                }
+            }
+        }
+    )
+}
 
 impl Z3 {
     pub fn new() -> Z3 {
@@ -142,9 +155,10 @@ impl Z3 {
         }
     }
 
+    impl_mk_2!(eq, Z3_mk_eq);
     impl_mk_2!(div, Z3_mk_div);
-    impl_mk_2!(od, Z3_mk_mod);
-    impl_mk_2!(re, Z3_mk_rem);
+    impl_mk_2!(mod_, Z3_mk_mod);
+    impl_mk_2!(rem, Z3_mk_rem);
     impl_mk_2!(power, Z3_mk_power);
     impl_mk_2!(lt, Z3_mk_lt);
     impl_mk_2!(le, Z3_mk_le);
@@ -193,15 +207,12 @@ impl Z3 {
     impl_mk_1!(bvneg_no_overflow, Z3_mk_bvneg_no_overflow);
     impl_mk_1!(bvneg, Z3_mk_bvneg);
 
-    pub fn eq<'a>(&'a self, t1: &Z3Ast, t2: &Z3Ast) -> Z3Ast<'a> {
-        unsafe {
-            let ast = z3_sys::Z3_mk_eq(self.ctx, t1.ast, t2.ast);
-            Z3Ast {
-                ast: ast,
-                z3: &self
-            }
-        }
-    }
+    impl_mk_i_1!(sign_ext, Z3_mk_sign_ext);
+    impl_mk_i_1!(zero_ext, Z3_mk_zero_ext);
+    impl_mk_i_1!(repeat, Z3_mk_repeat);
+    impl_mk_i_1!(rotate_left, Z3_mk_rotate_left);
+    impl_mk_i_1!(rotate_right, Z3_mk_rotate_right);
+
 
     /// Create a new BitVector const of name `i` and width `w`
     pub fn mk_bv_i<'a>(&'a self, i: i32, w: u32) -> Z3Ast<'a> {
