@@ -46,6 +46,19 @@ macro_rules! impl_mk_2 {
         }
     )
 }
+macro_rules! impl_mk_3 {
+    ($name:ident, $fun:ident) => (
+        pub fn $name<'a>(&'a self, t1: &Z3Ast, t2: &Z3Ast, t3: &Z3Ast) -> Z3Ast<'a> {
+            unsafe {
+                let ast = z3_sys::$fun(self.ctx, t1.ast, t2.ast, t3.ast);
+                Z3Ast {
+                    ast: ast,
+                    z3: &self
+                }
+            }
+        }
+    )
+}
 macro_rules! impl_mk_i_1 {
     ($name:ident, $fun:ident) => (
         pub fn $name<'a>(&'a self, i: u32, t1: &Z3Ast) -> Z3Ast<'a> {
@@ -78,8 +91,7 @@ impl Z3 {
         let cstr = z3_sys::Z3_model_to_string(self.ctx, m);
         let slice = CStr::from_ptr(cstr);
         let buf: &[u8] = slice.to_bytes();
-        let str_slice: &str = str::from_utf8(buf).unwrap();
-        str_slice
+        str::from_utf8(buf).unwrap()
     }
 
     pub fn check_and_get_model<'a>(&'a self, f: &Z3Ast) -> Z3Model<'a> {
@@ -214,9 +226,10 @@ impl Z3 {
     impl_mk_i_1!(rotate_left, Z3_mk_rotate_left);
     impl_mk_i_1!(rotate_right, Z3_mk_rotate_right);
 
+    impl_mk_3!(ite, Z3_mk_ite);
 
     /// Create a new BitVector const of name `i` and width `w`
-    pub fn mk_bv_i<'a>(&'a self, i: i32, w: u32) -> Z3Ast<'a> {
+    pub fn mk_bv_i(&self, i: i32, w: u32) -> Z3Ast {
         unsafe {
             let sort= z3_sys::Z3_mk_bv_sort(self.ctx, w);
             let sym = z3_sys::Z3_mk_int_symbol(self.ctx, i);
@@ -308,8 +321,7 @@ impl <'a> Z3Model<'a> {
                 let cstr = z3_sys::Z3_model_to_string(self.z3.ctx(), *self.model);
                 let slice = CStr::from_ptr(cstr);
                 let buf: &[u8] = slice.to_bytes();
-                let str_slice: &str = str::from_utf8(buf).unwrap();
-                str_slice
+                str::from_utf8(buf).unwrap()
             }
         } else {
             "no model"
@@ -359,11 +371,11 @@ fn it_works() {
     let d = z3.bvand(&a, &b);
     let e = z3.bvor(&a, &b);
 
-    let gt = z3.bvugt(&d, &e);
+    //let gt = z3.bvugt(&d, &e);
     let eq = z3.eq(&d, &e);
-    let neq = z3.not(&gt);
+    //let neq = z3.not(&gt);
 
-    let h = z3.prove(&eq, true);
+    //let h = z3.prove(&eq, true);
 
     let model = z3.check_and_get_model(&eq);
     println!("model: {}", model.get_str());
