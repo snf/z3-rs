@@ -268,6 +268,19 @@ impl <'a> Z3Ast<'a> {
             }
         }
     }
+    /// Get numeral string representation of this Ast value
+    pub fn get_numstring(&self) -> Option<String> {
+        unsafe {
+            let cstr = z3_sys::Z3_get_numeral_string(self.z3.ctx(), self.ast);
+            let slice = CStr::from_ptr(cstr);
+            if let Ok(s) = slice.to_str() {
+                Some(s.to_owned())
+            } else {
+                None
+            }
+
+        }
+    }
     /// Get BitVector width
     pub fn get_bv_width(&self) -> u32 {
         unsafe {
@@ -383,4 +396,8 @@ fn it_works() {
     let new_a = model.eval(&a).unwrap();
     let val_a = new_a.get_u64().unwrap();
     println!("val_a: 0x{:x}", val_a);
+
+    let val_a = new_a.get_numstring().unwrap();
+    println!("val_a: 0x{}", val_a);
+
 }
