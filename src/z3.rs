@@ -252,6 +252,30 @@ impl Z3 {
         }
     }
 
+    /// Create a new BitVector const (real const) from Numerical String
+    pub fn mk_bv_const_str<'a>(&'a self, s: &str, w: u32) -> Z3Ast<'a> {
+        unsafe {
+            let sort= z3_sys::Z3_mk_bv_sort(self.ctx, w);
+            let cs = CString::new(s).unwrap();
+
+            Z3Ast {
+                ast: z3_sys::Z3_mk_numeral(self.ctx, cs.as_ptr(), sort),
+                z3: &self
+            }
+        }
+    }
+
+    /// Create a new BitVector const (real const) from i32
+    pub fn mk_bv_const_i<'a>(&'a self, i: i32, w: u32) -> Z3Ast<'a> {
+        unsafe {
+            let sort= z3_sys::Z3_mk_bv_sort(self.ctx, w);
+            Z3Ast {
+                ast: z3_sys::Z3_mk_int(self.ctx, i, sort),
+                z3: &self
+            }
+        }
+    }
+
 }
 
 impl <'a> Z3Ast<'a> {
