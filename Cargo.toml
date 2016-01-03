@@ -4,7 +4,7 @@ version = "0.1.0"
 authors = ["snf"]
 
 [dependencies]
-libc = "*"
+libc = "0.2"
 
 [dependencies.z3-sys]
-path = "../z3-sys"
+git = "https://github.com/snf/z3-sys.git"
