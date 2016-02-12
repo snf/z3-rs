@@ -1,3 +1,4 @@
+use std::fmt;
 use std::ffi::{CStr,CString};
 use std::ptr;
 use std::mem;
@@ -349,6 +350,22 @@ impl <'a> Z3Ast<'a> {
     pub fn extract(&self, high: u32, low: u32) -> Z3Ast<'a> {
         self.z3.extract(high, low, &self)
     }
+
+    /// Get AST String
+    pub fn get_string(&self) -> &str {
+        unsafe {
+            let cstr = z3_sys::Z3_ast_to_string(self.z3.ctx(), self.ast);
+            let slice = CStr::from_ptr(cstr);
+            let buf: &[u8] = slice.to_bytes();
+            str::from_utf8(buf).unwrap()
+        }
+    }
+}
+
+impl<'a> fmt::Display for Z3Ast<'a> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "({})", self.get_string())
+    }
 }
 
 impl <'a> Z3Model<'a> {
@@ -437,16 +454,18 @@ fn test_extract() {
 }
 
 /*
-XXX_ should fail?
+//XXX_ should fail?
 #[test]
 fn test_sdiv() {
    let z3 = Z3::new();
-    let aa = z3.mk_bv_const_i(0x10, 32);
-    let bb = z3.mk_bv_const_i(0xfffffff, 32);
-    let a = aa.sign_ext(0xfffffff0);
-    let b = bb.sign_ext(0xfffffff0);
+    let aa = z3.mk_bv_const_i(0x1, 1);
+    let bb = z3.mk_bv_const_i(0x1, 1);
+    let a = aa.sign_ext(127);
+    let b = bb.sign_ext(127);
     let c = z3.bvsdiv(&a, &b);
     let res = z3.mk_bv_const_i(20, 1);
+    println!("a: {}", a);
+    println!("b: {}", b);
     let eq = z3.eq(&c, &res);
     let model = z3.check_and_get_model(&eq);
     assert!(model.is_valid());
