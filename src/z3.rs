@@ -228,6 +228,17 @@ impl Z3 {
 
     impl_mk_3!(ite, Z3_mk_ite);
 
+    /// Extract bits from BitVector
+    pub fn extract<'a>(&'a self, high: u32, low: u32, t1: &Z3Ast) -> Z3Ast<'a> {
+        unsafe {
+            let ast = z3_sys::Z3_mk_extract(self.ctx, high, low, t1.ast);
+            Z3Ast {
+                ast: ast,
+                z3: &self
+            }
+        }
+    }
+
     /// Create a new BitVector const of name `i` and width `w`
     pub fn mk_bv_i(&self, i: i32, w: u32) -> Z3Ast {
         unsafe {
@@ -394,6 +405,17 @@ fn test_zero_ext() {
     let a = z3.mk_bv_str("a", 32);
     let b = a.zero_ext(32);
     assert_eq!(b.get_bv_width(), 64);
+}
+
+#[test]
+fn test_extract() {
+    let z3 = Z3::new();
+    let a = z3.mk_bv_const_i(0x1ff00, 32);
+    let bits = z3.extract(10, 8, &a);
+    let c = z3.mk_bv_const_i(0x7, 3);
+    let eq = z3.eq(&c, &bits);
+    let model = z3.check_and_get_model(&eq);
+    assert!(model.is_valid());
 }
 
 #[test]
