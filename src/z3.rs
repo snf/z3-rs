@@ -320,7 +320,14 @@ impl <'a> Z3Ast<'a> {
     pub fn get_bv_width(&self) -> u32 {
         unsafe {
             let sort = z3_sys::Z3_get_sort(self.z3.ctx(), self.ast);
-            z3_sys::Z3_get_bv_sort_size(self.z3.ctx(), sort)
+            let sort_kind = z3_sys::Z3_get_sort_kind(self.z3.ctx(), sort);
+            if sort_kind == z3_sys::Z3_BV_SORT {
+                z3_sys::Z3_get_bv_sort_size(self.z3.ctx(), sort)
+            } else if sort_kind == z3_sys::Z3_BOOL_SORT  {
+                1
+            } else {
+                unreachable!()
+            }
         }
     }
     /// Zero extend BitVector
