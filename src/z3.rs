@@ -287,6 +287,13 @@ impl Z3 {
         }
     }
 
+    /// Clone AST
+    pub fn clone_ast<'a>(&'a self, a: &Z3Ast) -> Z3Ast<'a> {
+        Z3Ast {
+            ast: a.ast,
+            z3: &self
+        }
+    }
 }
 
 impl <'a> Z3Ast<'a> {
