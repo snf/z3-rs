@@ -362,7 +362,7 @@ impl <'a> Z3Ast<'a> {
     }
 }
 
-impl<'a> fmt::Display for Z3Ast<'a> {
+impl<'a> fmt::Debug for Z3Ast<'a> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "({})", self.get_string())
     }
