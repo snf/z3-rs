@@ -311,7 +311,7 @@ impl <'a> Z3Ast<'a> {
             }
         }
     }
-    /// Get numeral string representation of this Ast value
+    /// Get numeral string representation of this Ast value in base 10
     pub fn get_numstring(&self) -> Option<String> {
         unsafe {
             let cstr = z3_sys::Z3_get_numeral_string(self.z3.ctx(), self.ast);
